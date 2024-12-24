@@ -1,0 +1,20 @@
+# SAM build artifacts
+.aws-sam/
+
+# AWS CloudFormation template files
+*.stack
+
+# AWS SAM CLI configuration
+.sam/
+
+# AWS SAM configuration file
+samconfig.toml
+
+# AWS CloudFormation change set files
+*.changeset
+
+# Log files
+*.log
+
+# Environment variable files
+.env

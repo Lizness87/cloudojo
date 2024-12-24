@@ -1,0 +1,156 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Parameters:
+  AWSRegion:
+    Type: String
+    Default: "us-east-1"
+  AWSAccount:
+    Type: String
+    Default: "267551332587"
+  S3Bucket:
+    Type: String
+    Description: "The S3 bucket where YAML files are stored"
+    Default: "sam-cloudojo"
+  VPCCIDR:
+    Type: String
+    Default: "10.0.0.0/16"
+  PublicSubnetCIDR:
+    Type: String
+    Default: "10.0.1.0/24"
+  PrivateSubnetCIDR:
+    Type: String
+    Default: "10.0.2.0/24"
+  VPCName:
+    Type: String
+    Default: "VPC-cloudojo"
+
+Resources:
+  # VPC Resource
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name
+          Value: !Ref VPCName
+
+  # Public Subnet in default AZ for region
+  PublicSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnetCIDR
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${VPCName}-PublicSubnet'
+
+  # Private Subnet in default AZ for region
+  PrivateSubnet:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetCIDR
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      Tags:
+        - Key: Name
+          Value: !Sub '${VPCName}-PrivateSubnet'
+
+  # Execution Role for EKS
+  ExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'eks.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'EKSExecutionPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'eks:DescribeCluster'
+                  - 'eks:UpdateClusterConfig'
+                  - 'eks:UpdateClusterVersion'
+                  - 'eks:CreateNodegroup'
+                  - 'eks:DescribeNodegroup'
+                  - 'eks:ListNodegroups'
+                  - 'cloudformation:DescribeStacks'
+                  - 'cloudformation:DescribeStackResources'
+                  - 'iam:PassRole'
+                  - 's3:GetObject'
+                Resource:
+                  - !Sub arn:aws:eks:${AWSRegion}:${AWSAccount}:cluster/my-cluster
+                  - !Sub arn:aws:cloudformation:${AWSRegion}:${AWSAccount}:stack/sam-cloudojo/*
+                  - !Sub arn:aws:s3:::${S3Bucket}/*
+
+  EksIamConfig:
+    Type: 'AWS::CloudFormation::Stack'
+    DeletionPolicy: Retain
+    DependsOn:
+      - ExecutionRole
+    Properties:
+      TemplateURL: !Sub 'https://s3.amazonaws.com/${S3Bucket}/infrastructure/iam-config.yaml'
+
+  EksCluster:
+    Type: 'AWS::CloudFormation::Stack'
+    DependsOn:
+      - VPC
+      - ExecutionRole
+    Properties:
+      TemplateURL: !Sub 'https://s3.amazonaws.com/${S3Bucket}/infrastructure/eks-cluster.yaml'
+      Parameters:
+        VpcId: !Ref VPC
+        SubnetIds: !Join [",", [ !Ref PublicSubnet, !Ref PrivateSubnet ]]
+        ExecutionRoleArn: !GetAtt ExecutionRole.Arn
+        ClusterRoleArn: !GetAtt EksIamConfig.Outputs.EKSClusterRoleArn
+        AutoScalerRoleArn: !GetAtt EksIamConfig.Outputs.EKSClusterAutoScalerRoleArn
+
+  EksNodeGroup:
+    Type: 'AWS::CloudFormation::Stack'
+    DependsOn: 
+      - EksCluster
+    Properties:
+      TemplateURL: !Sub 'https://s3.amazonaws.com/${S3Bucket}/infrastructure/node-groups.yaml'
+      Parameters:
+        VPCId: !Ref VPC
+        PublicSubnetId: !Ref PublicSubnet
+        PrivateSubnetId: !Ref PrivateSubnet
+
+Outputs:
+  ExecutionRoleArn:
+    Value: !GetAtt ExecutionRole.Arn
+
+  EksClusterOutput:
+    Value: !Ref EksCluster
+
+  EksNodeGroupOutput:
+    Value: !Ref EksNodeGroup
+
+  EksIamConfigOutput:
+    Value: !Ref EksIamConfig
+
+  VPCId:
+    Value: !Ref VPC
+
+  PublicSubnet:
+    Value: !Ref PublicSubnet
+
+  PrivateSubnet:
+    Value: !Ref PrivateSubnet
+
+  VPCName:
+    Value: !Ref VPCName

@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  SpotNodeGroup:
+    Type: 'AWS::EKS::Nodegroup'
+    Properties:
+      ClusterName: !Ref ClusterName 
+      NodegroupName: spot-node-group
+      Subnets: !Ref SubnetIds 
+      InstanceTypes:
+        - t3.small
+        - t3.medium
+      ScalingConfig:
+        DesiredSize: 2
+        MinSize: 1
+        MaxSize: 5
+      CapacityType: SPOT  
+      NodeRole: !ImportValue ExecutionRoleArn  # Reference the ExecutionRole ARN from the parent template
+      AmiType: AL2_x86_64  # Amazon Linux 2 AMI for nodes
+      Labels:
+        eks.amazonaws.com/nodegroup: spot-node-group
+      Tags:
+        Name: spot-node-group
+      LaunchTemplate:
+        Version: '1'  
+
+Outputs:
+  SpotNodeGroupOutput:
+    Value: !Ref SpotNodeGroup 

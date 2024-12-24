@@ -1,0 +1,72 @@
+name: Deploy SAM Application
+
+on:
+  push:
+    branches:
+      - dev
+      - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Prepare S3 Bucket for Environment (Dev/Prod)
+        run: |
+          if [ "${GITHUB_REF##*/}" == "dev" ]; then
+            BUCKET_NAME="sam-cloudojo-dev-${{ github.run_id }}"
+          elif [ "${GITHUB_REF##*/}" == "prod" ]; then
+            BUCKET_NAME="sam-cloudojo-prod-${{ github.run_id }}"
+          fi
+          # Create the S3 bucket
+          aws s3 mb s3://$BUCKET_NAME --region ${{ secrets.AWS_REGION }}
+          echo "S3 bucket created: s3://$BUCKET_NAME"
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Upload Kubernetes and Infrastructure files to S3
+        run: |
+          if [ "${GITHUB_REF##*/}" == "dev" ]; then
+            BUCKET_NAME="sam-cloudojo-dev-${{ github.run_id }}"
+          elif [ "${GITHUB_REF##*/}" == "prod" ]; then
+            BUCKET_NAME="sam-cloudojo-prod-${{ github.run_id }}"
+          fi
+          # Upload files to the S3 bucket
+          aws s3 cp ./k8s s3://$BUCKET_NAME/k8s/ --recursive
+          aws s3 cp ./infra s3://$BUCKET_NAME/infra/ --recursive
+          echo "Files uploaded to s3://$BUCKET_NAME"
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Install SAM CLI
+        run: |
+          curl -Lo sam.tar.gz https://github.com/aws/aws-sam-cli/releases/download/v1.56.0/aws-sam-cli-linux-x86_64.zip
+          sudo unzip sam.tar.gz -d /usr/local/bin
+
+      - name: Deploy to Dev Environment
+        if: ${{ github.ref == 'refs/heads/dev' }}
+        run: |
+          sam deploy --config-env dev
+        env:
+          AWS_ACCOUNT: "123456789012"
+          S3_BUCKET: ${{ secrets.S3_BUCKET_DEV }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to Prod Environment
+        if: ${{ github.ref == 'refs/heads/prod' }}
+        run: |
+          sam deploy --config-env prod
+        env:
+          AWS_ACCOUNT: "987654321098"
+          S3_BUCKET: ${{ secrets.S3_BUCKET_PROD }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}

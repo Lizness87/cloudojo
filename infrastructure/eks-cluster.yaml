@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  VpcId:
+    Type: String
+    Description: "VPC ID"
+  SubnetIds:
+    Type: String
+    Description: "Comma-separated list of Subnet IDs"
+  ExecutionRoleArn:
+    Type: String
+    Description: "Execution Role ARN"
+  ClusterRoleArn:
+    Type: String
+    Description: "Cluster Role ARN"
+  AutoScalerRoleArn:
+    Type: String
+    Description: "AutoScaler Role ARN"
+
+Resources:
+  EKSCluster:
+      Type: 'AWS::EKS::Cluster'
+      Properties:
+        Name: "EKSCluster"
+        RoleArn: !Ref ClusterRoleArn
+        ResourcesVpcConfig:
+          SubnetIds: !Split [",", !Ref SubnetIds] 
+          EndpointPublicAccess: true
+          EndpointPrivateAccess: false
+        Version: '1.30'
+
+Outputs:
+  ClusterName:
+    Description: "Name of the EKS Cluster"
+    Value: !Ref EKSCluster
+  ClusterArn:
+    Description: "ARN of the EKS Cluster"
+    Value: !GetAtt EKSCluster.Arn
+  ClusterEndpoint:
+    Description: "EKS Cluster API server endpoint"
+    Value: !GetAtt EKSCluster.Endpoint
