@@ -1,0 +1,32 @@
+# Default environment configuration
+[default.deploy]
+stack_name = "sam-cloudojo"
+resolve_s3 = true
+s3_prefix = "sam-cloudojo"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "AWSRegion=\"us-east-1\" AWSAccount=\"267551332587\" S3Bucket=\"sam-cloudojo\" VPCCIDR=\"10.0.0.0/16\" PublicSubnetCIDR=\"10.0.1.0/24\" PrivateSubnetCIDR=\"10.0.2.0/24\" VPCName=\"MyVPC\""
+image_repositories = []
+
+# Dev environment configuration
+[dev.deploy]
+stack_name = "sam-cloudojo-dev"
+resolve_s3 = true
+s3_prefix = "sam-cloudojo-dev"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "AWSRegion=\"us-east-1\" AWSAccount=\"123456789012\" S3Bucket=\"sam-cloudojo-dev\" VPCCIDR=\"10.0.0.0/16\" PublicSubnetCIDR=\"10.0.1.0/24\" PrivateSubnetCIDR=\"10.0.2.0/24\" VPCName=\"MyVPC\""
+image_repositories = []
+
+# Prod environment configuration
+[prod.deploy]
+stack_name = "sam-cloudojo-prod"
+resolve_s3 = true
+s3_prefix = "sam-cloudojo-prod"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "AWSRegion=\"us-east-1\" AWSAccount=\"987654321098\" S3Bucket=\"sam-cloudojo-prod\" VPCCIDR=\"10.0.0.0/16\" PublicSubnetCIDR=\"10.0.1.0/24\" PrivateSubnetCIDR=\"10.0.2.0/24\" VPCName=\"MyVPC\""
+image_repositories = []

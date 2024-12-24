@@ -64,3 +64,28 @@ The GitHub Actions workflow will automatically trigger:
 It will create the S3 bucket if it doesn't already exist.
 It will upload the relevant files from the project’s k8s manifests and infrastructure folders to the appropriate S3 bucket.
 It will deploy the SAM stack to CloudFormation.
+
+Technical Decisions
+1. Choice of GitHub Actions for Deployment
+GitHub Actions was chosen for automating the deployment of the SAM stack for several reasons:
+
+Seamless CI/CD Integration: GitHub Actions integrates directly with the GitHub repository, providing a streamlined process for continuous integration and deployment (CI/CD). This minimizes manual intervention and ensures that any code changes trigger automatic builds and deployments.
+
+Multi-Environment Support: With GitHub Actions, it’s easy to configure separate workflows for different environments (dev, prod). By using branch-specific deployments, I can control which environment the stack is deployed to based on the branch pushed to, ensuring that dev and prod environments are separated.
+
+Cost-Effective: GitHub Actions is free for public repositories and offers a generous free tier for private repositories, making it a cost-effective choice for CI/CD automation.
+
+Scalability: GitHub Actions workflows can be easily extended or modified to handle additional environments, deployment steps, or other tasks, which makes it a scalable solution as the project grows.
+
+2. Scaling Behavior and Horizontal Pod Autoscaling for PHP Application
+The PHP application in this setup uses Kubernetes' Horizontal Pod Autoscaler (HPA) to automatically scale based on resource utilization, ensuring that the app can handle varying loads efficiently.
+
+Scaling Based on Resource Utilization: The PHP application will scale when the average CPU or memory usage reaches 70%. This allows for dynamic scaling based on demand, ensuring the app can handle increased traffic and scale down when the load is low.
+
+Resource Requests and Limits: The application has defined resource requests and limits to ensure that each pod gets enough resources to run smoothly. The requests define the minimum resources required for the pod, and the limits ensure that the pod will not exceed these resources, preventing resource contention.
+Expected Scaling Behavior:
+Low Traffic: When traffic is low, the application will scale down to 1 replica to save resources.
+
+High Traffic: As CPU or memory usage exceeds the 70% utilization threshold, the HPA will scale the number of replicas up to 3, ensuring the application can handle increased demand.
+
+Max Scaling: The application can scale up to a maximum of 3 replicas, as defined by the maxReplicas setting in the HPA.

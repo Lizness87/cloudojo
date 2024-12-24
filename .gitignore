@@ -7,9 +7,6 @@
 # AWS SAM CLI configuration
 .sam/
 
-# AWS SAM configuration file
-samconfig.toml
-
 # AWS CloudFormation change set files
 *.changeset
 
